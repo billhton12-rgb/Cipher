@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 async function startServer() {
   const app = express();
@@ -10,12 +11,13 @@ async function startServer() {
 
   app.use(express.json());
 
-  // API to fetch content from URL
+  // Initialize Gemini upande wa Server (Siri yako inakaa hapa)
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+  // API 1: Fetch content kutoka URL (Ulishakuwa nayo)
   app.post("/api/fetch-content", async (req, res) => {
     const { url } = req.body;
-    if (!url) {
-      return res.status(400).json({ error: "URL is required" });
-    }
+    if (!url) return res.status(400).json({ error: "URL is required" });
 
     try {
       const response = await axios.get(url, {
@@ -26,24 +28,39 @@ async function startServer() {
       });
 
       const $ = cheerio.load(response.data);
-      
-      // Remove script and style elements
       $("script, style").remove();
-      
-      // Get text content
       const text = $("body").text().replace(/\s+/g, " ").trim();
-      
-      // Limit text length to avoid token limits in a simple way
-      const limitedText = text.substring(0, 10000);
-
-      res.json({ content: limitedText });
+      res.json({ content: text.substring(0, 10000) });
     } catch (error: any) {
-      console.error("Error fetching URL:", error.message);
-      res.status(500).json({ error: "Failed to fetch content from the provided URL. Please make sure the URL is accessible." });
+      res.status(500).json({ error: "Failed to fetch content from the URL." });
     }
   });
 
-  // Vite middleware for development
+  // API 2: Generate Notes (Hapa ndipo AI inafanyia kazi kwa siri)
+  app.post("/api/generate-notes", async (req, res) => {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: "Content is required" });
+
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `You are a smart, helpful student taking notes for a friend. 
+      Summarize the following content into simple, student-friendly English notes.
+      Style Requirements:
+      - Use clear, simple English.
+      - Use bullet points for key concepts.
+      - Include a "Big Idea" summary at the top.
+      - Use a friendly, encouraging tone.
+      Content: ${content}`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      res.json({ notes: response.text() });
+    } catch (error: any) {
+      console.error("AI Error:", error.message);
+      res.status(500).json({ error: "AI failed to generate notes." });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -59,7 +76,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
