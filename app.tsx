@@ -1,4 +1,6 @@
-import { useState, useRef } from "react";
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import './index.css' /
 // Ondoa import ya @google/genai hapa kwa usalama
 import { motion, AnimatePresence } from "framer-motion";
 import { 
