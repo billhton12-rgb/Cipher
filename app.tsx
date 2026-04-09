@@ -1,138 +1,87 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import './index.css' /
-// Ondoa import ya @google/genai hapa kwa usalama
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Link as LinkIcon, 
-  Sparkles, 
-  Copy, 
-  Check, 
-  Loader2, 
-  BookOpen, 
-  ExternalLink,
-  Github
-} from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import React, { useState, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Copy, Check, Sparkles, Link as LinkIcon } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import './index.css';
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
-export default function App() {
-  const [url, setUrl] = useState("");
+// Hapa ndipo Logic ya App yako inapoanza
+function App() {
+  const [url, setUrl] = useState('');
+  const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [notes, setNotes] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const generateNotes = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const generateNotes = async () => {
     if (!url) return;
-
     setLoading(true);
-    setError(null);
-    setNotes(null);
-
     try {
-      // 1. Fetch content kutoka URL kupitia backend
-      const fetchResponse = await fetch("/api/fetch-content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-
-      if (!fetchResponse.ok) throw new Error("Failed to fetch content");
-      const { content } = await fetchResponse.json();
-
-      // 2. Tuma content kwenda kwenye backend yetu ili ipate notes (API KEY IKO SIRI KULE)
-      const aiResponse = await fetch("/api/generate-notes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      });
-
-      if (!aiResponse.ok) throw new Error("AI processing failed");
-      const data = await aiResponse.json();
-
+      const data = await response.json();
       setNotes(data.notes);
-      
-      setTimeout(() => {
-        resultRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch (error) {
+      console.error("Error generating notes:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const copyToClipboard = () => {
-    if (!notes) return;
     navigator.clipboard.writeText(notes);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* KODI ZAKO ZA UI (Header, Hero, Input, Results) ZIBEKI VILE VILE HAPA CHINI */}
-      {/* ... (Nakili UI uliyokuwa nayo awali hapa) */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="text-white w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-blue-900">
-              br1te0n <span className="text-blue-500">ai</span>
-            </h1>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      <header className="max-w-4xl mx-auto text-center mb-12">
+        <h1 className="text-4xl font-bold text-blue-900 mb-2 flex items-center justify-center gap-3">
+          <Sparkles className="text-blue-600" /> br1te0n ai
+        </h1>
+        <p className="text-gray-600">Badilisha link yoyote kuwa Study Notes za kueleweka</p>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-12">
-        <div className="text-center mb-12">
-           <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-            Turn any link into <span className="text-blue-500 italic">perfect notes</span>
-          </h2>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-xl border border-blue-100 mb-12">
-          <form onSubmit={generateNotes} className="space-y-4">
-            <div className="relative">
-              <input
-                type="url"
-                required
-                placeholder="Paste article or video URL here..."
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-800"
+      <main className="max-w-4xl mx-auto">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <LinkIcon className="absolute left-3 top-3 text-gray-400 size-5" />
+              <input 
+                type="text" 
+                placeholder="Paste link hapa (mfano: Wikipedia...)" 
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
-              <LinkIcon className="absolute left-4 top-5 text-slate-400 w-5 h-5" />
             </div>
-            <button
-              type="submit"
+            <button 
+              onClick={generateNotes}
               disabled={loading}
-              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
             >
-              {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              {loading ? "Generating Notes..." : "Generate Notes"}
+              {loading ? "Inachakata..." : "Tengeneza"}
             </button>
-          </form>
+          </div>
         </div>
 
         <AnimatePresence>
           {notes && (
-            <motion.div ref={resultRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="notebook-paper p-8 bg-white border-l-8 border-blue-600 shadow-lg min-h-[400px]">
-               <div className="flex justify-between mb-4">
+            <motion.div 
+              ref={resultRef} 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="notebook-paper p-8 bg-white border-l-8 border-blue-600 shadow-lg min-h-[400px] rounded-r-xl"
+            >
+               <div className="flex justify-between mb-4 border-b pb-4">
                   <span className="font-bold text-blue-900 flex items-center gap-2"><BookOpen /> Study Notes</span>
-                  <button onClick={copyToClipboard} className="text-sm text-blue-600 flex items-center gap-1">
-                    {copied ? <Check /> : <Copy />} {copied ? "Copied!" : "Copy"}
+                  <button onClick={copyToClipboard} className="text-sm text-blue-600 flex items-center gap-1 font-medium">
+                    {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Copied!" : "Copy"}
                   </button>
                </div>
                <div className="prose prose-blue max-w-none">
@@ -145,3 +94,16 @@ export default function App() {
     </div>
   );
 }
+
+// HII NDIYO SEHEMU MUHIMU ILIYOKUWA INAKOSEKANA:
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+
+export default App;
