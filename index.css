@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kalam:wght@300;400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-handwriting: "Kalam", cursive;
+  
+  --color-brand-deep: #1e3a8a;
+  --color-brand-light: #60a5fa;
+  --color-brand-soft: #dbeafe;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900 font-sans;
+  }
+}
+
+@layer components {
+  .notebook-paper {
+    @apply relative bg-white border border-slate-200 shadow-xl p-8 min-h-[400px];
+    background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+    background-size: 100% 2rem;
+    line-height: 2rem;
+  }
+
+  .notebook-paper::before {
+    content: '';
+    @apply absolute top-0 left-12 w-[2px] h-full bg-red-200;
+  }
+
+  .notebook-content {
+    @apply pl-16 font-handwriting text-xl text-slate-800;
+  }
+}
+
